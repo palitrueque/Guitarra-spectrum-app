@@ -163,6 +163,45 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     dotData: const FlDotData(show: false),
                   ),
                 ],
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  getTouchedSpotIndicator: (barData, spotIndexes) {
+                    return spotIndexes.map((index) {
+                      return TouchedSpotLineIndicatorData(
+                        FlLine(color: Colors.black54, strokeWidth: 1.5),
+                        FlDotData(
+                          getDotPainter: (spot, percent, bar, index) =>
+                              FlDotCirclePainter(
+                            radius: 4,
+                            color: Colors.black87,
+                            strokeWidth: 0,
+                          ),
+                        ),
+                      );
+                    }).toList();
+                  },
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (touchedSpot) => Colors.black87,
+                    tooltipBorderRadius: BorderRadius.circular(8),
+                    tooltipPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        return LineTooltipItem(
+                          'Frecuencia: ${spot.x.toStringAsFixed(3)} Hz\n'
+                          'Amplitud: ${spot.y.toStringAsFixed(3)}',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
               ),
             ),
           ),
