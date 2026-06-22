@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
+import 'analysis/analysis_screen.dart';
+
 void main() {
   runApp(const GuitarraSpectrumApp());
 }
@@ -203,11 +205,10 @@ class _RecorderScreenState extends State<RecorderScreen> {
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () {
-                    // El analisis FFT se conectara aqui en el siguiente paso.
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'El analisis del espectro se anadira en el proximo paso',
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AnalysisScreen(
+                          wavFilePath: _lastRecordingPath!,
                         ),
                       ),
                     );
