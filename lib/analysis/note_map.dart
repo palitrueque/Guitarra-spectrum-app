@@ -22,6 +22,21 @@ class NoteMap {
   static double _frequencyOf(int n) =>
       440 * math.pow(2, (n - 49) / 12).toDouble();
 
+  /// Devuelve el nombre de la nota musical (con octava, ej. "E4") mas
+  /// cercana a una frecuencia dada, usando temperamento igual con
+  /// A4 = 440 Hz, igual notacion cientifica que usa el resto del mapa
+  /// (E2 = 82.41 Hz, etc).
+  static String nearestNoteName(double frequencyHz) {
+    if (frequencyHz <= 0) return '-';
+    const names = [
+      'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+    ];
+    final midi = (69 + 12 * (math.log(frequencyHz / 440) / math.ln2)).round();
+    final noteIndex = midi % 12;
+    final octave = (midi ~/ 12) - 1;
+    return '${names[noteIndex]}$octave';
+  }
+
   static List<NoteMarker> buildMarkers() {
     const e2 = 20;
     final noctave = List.generate(4, (i) => e2 + i * 12); // E2, E3, E4, E5
