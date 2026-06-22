@@ -167,7 +167,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   enabled: true,
                   getTouchedSpotIndicator: (barData, spotIndexes) {
                     return spotIndexes.map((index) {
-                      return TouchedSpotLineIndicatorData(
+                      return TouchedSpotIndicatorData(
                         FlLine(color: Colors.black54, strokeWidth: 1.5),
                         FlDotData(
                           getDotPainter: (spot, percent, bar, index) =>
@@ -182,7 +182,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   },
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipColor: (touchedSpot) => Colors.black87,
-                    tooltipBorderRadius: BorderRadius.circular(8),
                     tooltipPadding: const EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 8,
