@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import 'fft_processor.dart';
+import 'note_map.dart';
 import 'wav_reader.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -201,13 +202,38 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     },
                   ),
                 ),
+                extraLinesData: ExtraLinesData(
+                  verticalLines: [
+                    for (final marker in NoteMap.buildMarkers())
+                      VerticalLine(
+                        x: marker.frequency,
+                        color: marker.isOctaveMarker
+                            ? Colors.red.shade800
+                            : Colors.red.withOpacity(0.45),
+                        strokeWidth: marker.isOctaveMarker ? 2 : 0.8,
+                        label: marker.isOctaveMarker
+                            ? VerticalLineLabel(
+                                show: true,
+                                alignment: Alignment.topCenter,
+                                padding: const EdgeInsets.only(bottom: 4),
+                                style: TextStyle(
+                                  color: Colors.red.shade900,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                                labelResolver: (_) => marker.label ?? '',
+                              )
+                            : null,
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
           const SizedBox(height: 8),
           Center(
             child: Text(
-              'Frecuencia [Hz]',
+              'Frecuencia [Hz]  —  lineas rojas: notas musicales E2-D6',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
