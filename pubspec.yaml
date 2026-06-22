@@ -49,6 +49,13 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+# Forzamos una version mas reciente de record_linux porque la version
+# que arrastra "record" tiene un bug de compatibilidad con su propia
+# interfaz (record_platform_interface), lo que rompe la compilacion
+# aunque no usemos Linux como plataforma.
+dependency_overrides:
+  record_linux: ^1.1.0
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
