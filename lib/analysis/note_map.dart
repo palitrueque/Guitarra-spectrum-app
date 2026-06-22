@@ -19,7 +19,8 @@ class NoteMarker {
 /// frecuencias de las notas musicales desde E2 hasta D6, usando la misma
 /// formula de temperamento igual (440*2^((n-49)/12)) que el script original.
 class NoteMap {
-  static double _frequencyOf(int n) => 440 * math.pow(2, (n - 49) / 12);
+  static double _frequencyOf(int n) =>
+      440 * math.pow(2, (n - 49) / 12).toDouble();
 
   static List<NoteMarker> buildMarkers() {
     const e2 = 20;
