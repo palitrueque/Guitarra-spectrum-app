@@ -121,6 +121,33 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          SizedBox(
+            height: 20,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                const fMax = 1190.0;
+                return Stack(
+                  children: [
+                    for (final marker in NoteMap.buildMarkers())
+                      if (marker.isOctaveMarker)
+                        Positioned(
+                          left: (marker.frequency / fMax) * width - 12,
+                          child: Text(
+                            marker.label ?? '',
+                            style: TextStyle(
+                              color: Colors.red.shade800,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 4),
           Expanded(
             child: LineChart(
               LineChartData(
@@ -189,9 +216,11 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     ),
                     getTooltipItems: (touchedSpots) {
                       return touchedSpots.map((spot) {
+                        final note = NoteMap.nearestNoteName(spot.x);
                         return LineTooltipItem(
                           'Frecuencia: ${spot.x.toStringAsFixed(3)} Hz\n'
-                          'Amplitud: ${spot.y.toStringAsFixed(3)}',
+                          'Amplitud: ${spot.y.toStringAsFixed(3)}\n'
+                          'Nota mas cercana: $note',
                           const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -202,38 +231,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     },
                   ),
                 ),
-                extraLinesData: ExtraLinesData(
-                  verticalLines: [
-                    for (final marker in NoteMap.buildMarkers())
-                      VerticalLine(
-                        x: marker.frequency,
-                        color: marker.isOctaveMarker
-                            ? Colors.red.shade800
-                            : Colors.red.withOpacity(0.45),
-                        strokeWidth: marker.isOctaveMarker ? 2 : 0.8,
-                        label: marker.isOctaveMarker
-                            ? VerticalLineLabel(
-                                show: true,
-                                alignment: Alignment.topCenter,
-                                padding: const EdgeInsets.only(bottom: 4),
-                                style: TextStyle(
-                                  color: Colors.red.shade900,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
-                                labelResolver: (_) => marker.label ?? '',
-                              )
-                            : null,
-                      ),
-                  ],
-                ),
               ),
             ),
           ),
           const SizedBox(height: 8),
           Center(
             child: Text(
-              'Frecuencia [Hz]  —  lineas rojas: notas musicales E2-D6',
+              'Frecuencia [Hz]',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
