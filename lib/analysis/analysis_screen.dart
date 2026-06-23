@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'fft_processor.dart';
 import 'note_map.dart';
@@ -22,6 +23,15 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   SpectrumResult? _spectrum;
   SpectrumResult? _fullSpectrum;
   final int _nfft = 65536;
+  bool? _lastIsLandscape;
+
+  @override
+  void dispose() {
+    // Al salir de esta pantalla, restauramos la barra de sistema normal
+    // por si nos vamos en modo inmersivo (horizontal).
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -95,6 +105,18 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     final spectrum = _spectrum!;
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
+
+    // Modo inmersivo en horizontal: ocultamos la barra de estado
+    // (bateria, senal, etc.) para aprovechar toda la pantalla. En
+    // vertical, restauramos la barra normal.
+    if (_lastIsLandscape != isLandscape) {
+      _lastIsLandscape = isLandscape;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        SystemChrome.setEnabledSystemUIMode(
+          isLandscape ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+        );
+      });
+    }
 
     final infoCard = Card(
       child: Padding(
