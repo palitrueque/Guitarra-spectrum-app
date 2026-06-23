@@ -22,6 +22,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   List<OctaveBand>? _octaveBands;
   final int _nfft = 65536;
 
+  // Offset fijo usado solo para dibujar las barras (igual que en MATLAB:
+  // bar(bands+30,...)), asi la barra crece desde 0 hacia arriba en vez
+  // de "colgar" hacia abajo por ser valores en dB negativos. Las
+  // etiquetas de los ejes y los tooltips siempre muestran el valor
+  // real en dB (sin el offset).
+  static const double _dbOffset = 30.0;
+
   @override
   void initState() {
     super.initState();
@@ -65,46 +72,65 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Espectro de frecuencias'),
-        centerTitle: true,
-      ),
-      body: _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Calculando FFT...'),
-          ],
-        ),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Text(
-            _errorMessage!,
-            style: const TextStyle(color: Colors.red),
-            textAlign: TextAlign.center,
+      return Scaffold(
+        appBar: AppBar(title: const Text('Espectro de frecuencias')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Calculando FFT...'),
+            ],
           ),
         ),
       );
     }
 
-    final spectrum = _spectrum!;
-    final octaveBands = _octaveBands!;
+    if (_errorMessage != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Espectro de frecuencias')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
 
-    return SingleChildScrollView(
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Espectro de frecuencias'),
+          centerTitle: true,
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Espectro'),
+              Tab(text: 'Bandas de octava'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _buildSpectrumTab(),
+            _buildOctaveBandsTab(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpectrumTab() {
+    final spectrum = _spectrum!;
+
+    return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,10 +139,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           const SizedBox(height: 16),
           _buildNoteLabelsRow(),
           const SizedBox(height: 4),
-          SizedBox(
-            height: 320,
-            child: _buildSpectrumChart(spectrum),
-          ),
+          Expanded(child: _buildSpectrumChart(spectrum)),
           const SizedBox(height: 8),
           Center(
             child: Text(
@@ -124,16 +147,25 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
-          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOctaveBandsTab() {
+    final octaveBands = _octaveBands!;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            'Bandas de tercios de octava',
+            'Nivel medio por banda (dB)',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 320,
-            child: _buildOctaveBandsChart(octaveBands),
-          ),
+          const SizedBox(height: 12),
+          Expanded(child: _buildOctaveBandsChart(octaveBands)),
           const SizedBox(height: 8),
           Center(
             child: Text(
@@ -141,7 +173,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -293,19 +324,29 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   }
 
   Widget _buildOctaveBandsChart(List<OctaveBand> bands) {
+    // Valores reales (sin offset) para decidir el rango del eje.
     final validValues = bands
         .map((b) => b.averageDb)
         .where((v) => !v.isNaN)
         .toList();
     final minDb = validValues.isEmpty
-        ? -10.0
+        ? -30.0
         : validValues.reduce((a, b) => a < b ? a : b);
     final maxDb = validValues.isEmpty
         ? 10.0
         : validValues.reduce((a, b) => a > b ? a : b);
 
-    final chartMin = (minDb - 5).floorToDouble();
-    final chartMax = (maxDb + 5).ceilToDouble();
+    // Rango del eje Y EN PANTALLA (con el offset ya sumado), de forma
+    // que el 0 real en dB caiga dentro del rango visible y las barras
+    // siempre crezcan desde abajo (y=0 en pantalla = limite inferior).
+    final screenMin = 0.0;
+    final screenMax = ((maxDb + _dbOffset) + 5).clamp(40.0, 200.0).ceilToDouble();
+    // Si hay valores muy negativos que quedarian fuera (offset+valor<0),
+    // ampliamos el offset efectivo solo para el rango minimo del eje.
+    final lowestScreenValue = minDb + _dbOffset;
+    final effectiveMin = lowestScreenValue < 0
+        ? lowestScreenValue - 5
+        : screenMin;
 
     final barWidth = 28.0;
     final chartWidth = bands.length * (barWidth + 12) + 20;
@@ -316,8 +357,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         width: chartWidth,
         child: BarChart(
           BarChartData(
-            minY: chartMin,
-            maxY: chartMax,
+            minY: effectiveMin,
+            maxY: screenMax,
             gridData: const FlGridData(show: true),
             borderData: FlBorderData(show: true),
             titlesData: FlTitlesData(
@@ -338,8 +379,20 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   },
                 ),
               ),
-              leftTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: true, reservedSize: 40),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 44,
+                  interval: 10,
+                  getTitlesWidget: (value, meta) {
+                    // Mostramos el valor REAL en dB (restamos el offset).
+                    final realDb = value - _dbOffset;
+                    return Text(
+                      realDb.toStringAsFixed(0),
+                      style: const TextStyle(fontSize: 10),
+                    );
+                  },
+                ),
               ),
               topTitles: const AxisTitles(
                 sideTitles: SideTitles(showTitles: false),
@@ -372,7 +425,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   x: i,
                   barRods: [
                     BarChartRodData(
-                      toY: bands[i].averageDb.isNaN ? 0 : bands[i].averageDb,
+                      toY: bands[i].averageDb.isNaN
+                          ? 0
+                          : bands[i].averageDb + _dbOffset,
                       width: barWidth,
                       color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.zero,
