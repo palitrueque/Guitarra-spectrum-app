@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'fft_processor.dart';
 import 'note_map.dart';
 import 'octave_bands_screen.dart';
+import 'q_factor_screen.dart';
 import 'wav_reader.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -259,6 +260,23 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               },
               icon: const Icon(Icons.bar_chart),
               label: const Text('Ver bandas de tercios de octava'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => QFactorScreen(
+                      fullSpectrum: _fullSpectrum!,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.show_chart),
+              label: const Text('Ver picos de resonancia (Q-factor)'),
             ),
           ),
         ],
