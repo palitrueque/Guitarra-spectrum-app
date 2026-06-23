@@ -51,9 +51,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         octaveTable,
       );
 
-      // Rango 0-1190 Hz, igual que la Figura 2 de MATLAB: ahi es donde
-      // estan los picos de resonancia relevantes del cuerpo del instrumento.
-      final spectrum = fullSpectrum.sliceRange(0, 1190);
+      // Rango 0-2000 Hz: cubre los picos de resonancia relevantes del
+      // cuerpo del instrumento, con margen por encima del mapa de notas
+      // (E2-D6, hasta ~1175 Hz).
+      final spectrum = fullSpectrum.sliceRange(0, 2000);
 
       setState(() {
         _spectrum = spectrum;
@@ -185,7 +186,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
-          const fMax = 1190.0;
+          const fMax = 2000.0;
           return Stack(
             children: [
               for (final marker in NoteMap.buildMarkers())
@@ -216,7 +217,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     return LineChart(
       LineChartData(
         minX: 0,
-        maxX: 1190,
+        maxX: 2000,
         minY: 0,
         maxY: maxMag * 1.1,
         gridData: const FlGridData(show: true),
