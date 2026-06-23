@@ -18,6 +18,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   String? _errorMessage;
   SpectrumResult? _spectrum;
   int _nfft = 65536;
+  double _rawPeak = 0.0;
+  int _sampleRate = 0;
+  int _numSamples = 0;
 
   @override
   void initState() {
@@ -33,12 +36,25 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
     try {
       final wav = await WavReader.readFile(widget.wavFilePath);
+
+      // DIAGNOSTICO: pico de la senal en bruto, antes de cualquier FFT.
+      // Si esto ya sale muy bajo (cercano a 0), el problema esta en la
+      // grabacion (o en la lectura del WAV), no en el calculo del espectro.
+      double rawPeak = 0.0;
+      for (final s in wav.samples) {
+        final a = s.abs();
+        if (a > rawPeak) rawPeak = a;
+      }
+
       final fullSpectrum = FftProcessor.computeSpectrum(wav, nfft: _nfft);
       // Nos quedamos con el rango 0-1190 Hz, igual que la Figura 2 de MATLAB.
       final spectrum = fullSpectrum.sliceRange(0, 1190);
 
       setState(() {
         _spectrum = spectrum;
+        _rawPeak = rawPeak;
+        _sampleRate = wav.sampleRate;
+        _numSamples = wav.samples.length;
         _isLoading = false;
       });
     } catch (e) {
@@ -97,6 +113,16 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            color: Colors.yellow.shade100,
+            child: Text(
+              'DIAGNOSTICO: pico senal cruda = ${_rawPeak.toStringAsFixed(5)}  '
+              '|  Fs = $_sampleRate Hz  |  muestras = $_numSamples',
+              style: const TextStyle(fontSize: 11),
+            ),
+          ),
+          const SizedBox(height: 8),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
