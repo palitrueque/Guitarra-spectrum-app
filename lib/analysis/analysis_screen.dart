@@ -190,6 +190,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       },
     );
   }
+
+  Widget _buildInfoCard(SpectrumResult spectrum) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12.0),
