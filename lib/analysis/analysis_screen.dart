@@ -51,9 +51,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         octaveTable,
       );
 
-      // Para el grafico principal nos quedamos con 0-1190 Hz, igual que
-      // la Figura 2 de MATLAB.
-      final spectrum = fullSpectrum.sliceRange(0, 1190);
+      // Ampliamos el rango hasta 8000 Hz (en vez de 1190), igual de
+      // amplio que el rango principal de las bandas de octava.
+      final spectrum = fullSpectrum.sliceRange(0, 8000);
 
       setState(() {
         _spectrum = spectrum;
@@ -116,21 +116,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         children: [
           _buildInfoCard(spectrum),
           const SizedBox(height: 16),
-          _buildNoteLabelsRow(),
-          const SizedBox(height: 4),
-          // Grafico del espectro: altura grande para no perder detalle
-          // de los picos (equivalente a la Figura 2 de MATLAB).
-          SizedBox(
-            height: 520,
-            child: _buildSpectrumChart(spectrum),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              'Frecuencia [Hz]',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
+          // Grafico del espectro con scroll horizontal: mas espacio por
+          // Hz para distinguir mejor los picos, en vez de mas altura.
+          _buildScrollableSpectrumSection(spectrum),
           const SizedBox(height: 32),
           const Divider(),
           const SizedBox(height: 16),
@@ -156,7 +144,52 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     );
   }
 
-  Widget _buildInfoCard(SpectrumResult spectrum) {
+  Widget _buildScrollableSpectrumSection(SpectrumResult spectrum) {
+    const fMax = 8000.0;
+    const pixelsPerHz = 0.6; // mas espacio horizontal por Hz
+    final chartWidth = fMax * pixelsPerHz;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = chartWidth < constraints.maxWidth
+            ? constraints.maxWidth
+            : chartWidth;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: width,
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 20,
+                      child: _buildNoteLabelsRow(width, fMax),
+                    ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 380,
+                      width: width,
+                      child: _buildSpectrumChart(spectrum, fMax),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Frecuencia [Hz]  (desliza para ver mas)',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -181,36 +214,27 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     );
   }
 
-  Widget _buildNoteLabelsRow() {
-    return SizedBox(
-      height: 20,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          const fMax = 1190.0;
-          return Stack(
-            children: [
-              for (final marker in NoteMap.buildMarkers())
-                if (marker.isOctaveMarker)
-                  Positioned(
-                    left: (marker.frequency / fMax) * width - 12,
-                    child: Text(
-                      marker.label ?? '',
-                      style: TextStyle(
-                        color: Colors.red.shade800,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-            ],
-          );
-        },
-      ),
+  Widget _buildNoteLabelsRow(double width, double fMax) {
+    return Stack(
+      children: [
+        for (final marker in NoteMap.buildMarkers())
+          if (marker.isOctaveMarker)
+            Positioned(
+              left: (marker.frequency / fMax) * width - 12,
+              child: Text(
+                marker.label ?? '',
+                style: TextStyle(
+                  color: Colors.red.shade800,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+      ],
     );
   }
 
-  Widget _buildSpectrumChart(SpectrumResult spectrum) {
+  Widget _buildSpectrumChart(SpectrumResult spectrum, double fMax) {
     final maxMag = spectrum.magnitudes.isEmpty
         ? 1.0
         : spectrum.magnitudes.reduce((a, b) => a > b ? a : b);
@@ -218,7 +242,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     return LineChart(
       LineChartData(
         minX: 0,
-        maxX: 1190,
+        maxX: fMax,
         minY: 0,
         maxY: maxMag * 1.1,
         gridData: const FlGridData(show: true),
@@ -227,7 +251,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              interval: 100,
+              interval: 200,
               reservedSize: 28,
               getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
