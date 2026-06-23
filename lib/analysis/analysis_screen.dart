@@ -93,193 +93,236 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     }
 
     final spectrum = _spectrum!;
-    final maxMag = spectrum.magnitudes.isEmpty
-        ? 1.0
-        : spectrum.magnitudes.reduce((a, b) => a > b ? a : b);
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    final infoCard = Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _infoColumn(
+              'Frecuencia de pico',
+              '${spectrum.peakFrequency.toStringAsFixed(2)} Hz',
+            ),
+            _infoColumn(
+              'Amplitud',
+              spectrum.peakMagnitude.toStringAsFixed(2),
+            ),
+            _infoColumn(
+              'Resolucion',
+              '${spectrum.frequencyResolution.toStringAsFixed(3)} Hz',
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final noteLabelsRow = SizedBox(
+      height: 20,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          const fMax = 1190.0;
+          return Stack(
+            children: [
+              for (final marker in NoteMap.buildMarkers())
+                if (marker.isOctaveMarker)
+                  Positioned(
+                    left: (marker.frequency / fMax) * width - 12,
+                    child: Text(
+                      marker.label ?? '',
+                      style: TextStyle(
+                        color: Colors.red.shade800,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+            ],
+          );
+        },
+      ),
+    );
+
+    final chart = _buildChart(spectrum);
+
+    final freqCaption = Center(
+      child: Text(
+        'Frecuencia [Hz]',
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+
+    final octaveBandsButton = SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => OctaveBandsScreen(
+                fullSpectrum: _fullSpectrum!,
+              ),
+            ),
+          );
+        },
+        icon: const Icon(Icons.bar_chart),
+        label: const Text('Ver bandas de tercios de octava'),
+      ),
+    );
+
+    final qFactorButton = SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => QFactorScreen(
+                fullSpectrum: _fullSpectrum!,
+              ),
+            ),
+          );
+        },
+        icon: const Icon(Icons.show_chart),
+        label: const Text('Ver picos de resonancia (Q-factor)'),
+      ),
+    );
+
+    // En horizontal hay mucha menos altura disponible (la tarjeta, las
+    // etiquetas y los botones dejan muy poco sitio), asi que en ese caso
+    // hacemos la pantalla desplazable y le damos al grafico una altura
+    // fija razonable en vez de "Expanded" (que se quedaria sin espacio).
+    if (isLandscape) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            infoCard,
+            const SizedBox(height: 16),
+            noteLabelsRow,
+            const SizedBox(height: 4),
+            SizedBox(height: 320, child: chart),
+            const SizedBox(height: 8),
+            freqCaption,
+            const SizedBox(height: 12),
+            octaveBandsButton,
+            const SizedBox(height: 8),
+            qFactorButton,
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _infoColumn(
-                    'Frecuencia de pico',
-                    '${spectrum.peakFrequency.toStringAsFixed(2)} Hz',
-                  ),
-                  _infoColumn(
-                    'Amplitud',
-                    spectrum.peakMagnitude.toStringAsFixed(2),
-                  ),
-                  _infoColumn(
-                    'Resolucion',
-                    '${spectrum.frequencyResolution.toStringAsFixed(3)} Hz',
-                  ),
-                ],
-              ),
-            ),
-          ),
+          infoCard,
           const SizedBox(height: 16),
-          SizedBox(
-            height: 20,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                const fMax = 1190.0;
-                return Stack(
-                  children: [
-                    for (final marker in NoteMap.buildMarkers())
-                      if (marker.isOctaveMarker)
-                        Positioned(
-                          left: (marker.frequency / fMax) * width - 12,
-                          child: Text(
-                            marker.label ?? '',
-                            style: TextStyle(
-                              color: Colors.red.shade800,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                  ],
-                );
-              },
-            ),
-          ),
+          noteLabelsRow,
           const SizedBox(height: 4),
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                minX: 0,
-                maxX: 1190,
-                minY: 0,
-                maxY: maxMag * 1.1,
-                gridData: const FlGridData(show: true),
-                borderData: FlBorderData(show: true),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 100,
-                      reservedSize: 28,
-                      getTitlesWidget: (value, meta) => Text(
-                        value.toInt().toString(),
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    ),
-                  ),
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: [
-                      for (int i = 0; i < spectrum.frequencies.length; i++)
-                        FlSpot(spectrum.frequencies[i], spectrum.magnitudes[i]),
-                    ],
-                    isCurved: false,
-                    color: Theme.of(context).colorScheme.primary,
-                    barWidth: 1.2,
-                    dotData: const FlDotData(show: false),
-                  ),
-                ],
-                lineTouchData: LineTouchData(
-                  enabled: true,
-                  getTouchedSpotIndicator: (barData, spotIndexes) {
-                    return spotIndexes.map((index) {
-                      return TouchedSpotIndicatorData(
-                        FlLine(color: Colors.black54, strokeWidth: 1.5),
-                        FlDotData(
-                          getDotPainter: (spot, percent, bar, index) =>
-                              FlDotCirclePainter(
-                            radius: 4,
-                            color: Colors.black87,
-                            strokeWidth: 0,
-                          ),
-                        ),
-                      );
-                    }).toList();
-                  },
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (touchedSpot) => Colors.black87,
-                    tooltipPadding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    getTooltipItems: (touchedSpots) {
-                      return touchedSpots.map((spot) {
-                        final note = NoteMap.nearestNoteName(spot.x);
-                        return LineTooltipItem(
-                          'Frecuencia: ${spot.x.toStringAsFixed(3)} Hz\n'
-                          'Amplitud: ${spot.y.toStringAsFixed(3)}\n'
-                          'Nota mas cercana: $note',
-                          const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        );
-                      }).toList();
-                    },
-                  ),
-                ),
+          Expanded(child: chart),
+          const SizedBox(height: 8),
+          freqCaption,
+          const SizedBox(height: 12),
+          octaveBandsButton,
+          const SizedBox(height: 8),
+          qFactorButton,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChart(SpectrumResult spectrum) {
+    final maxMag = spectrum.magnitudes.isEmpty
+        ? 1.0
+        : spectrum.magnitudes.reduce((a, b) => a > b ? a : b);
+
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: 1190,
+        minY: 0,
+        maxY: maxMag * 1.1,
+        gridData: const FlGridData(show: true),
+        borderData: FlBorderData(show: true),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 100,
+              reservedSize: 28,
+              getTitlesWidget: (value, meta) => Text(
+                value.toInt().toString(),
+                style: const TextStyle(fontSize: 10),
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              'Frecuencia [Hz]',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+          leftTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: true, reservedSize: 40),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => OctaveBandsScreen(
-                      fullSpectrum: _fullSpectrum!,
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.bar_chart),
-              label: const Text('Ver bandas de tercios de octava'),
-            ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
           ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => QFactorScreen(
-                      fullSpectrum: _fullSpectrum!,
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.show_chart),
-              label: const Text('Ver picos de resonancia (Q-factor)'),
-            ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        lineBarsData: [
+          LineChartBarData(
+            spots: [
+              for (int i = 0; i < spectrum.frequencies.length; i++)
+                FlSpot(spectrum.frequencies[i], spectrum.magnitudes[i]),
+            ],
+            isCurved: false,
+            color: Theme.of(context).colorScheme.primary,
+            barWidth: 1.2,
+            dotData: const FlDotData(show: false),
           ),
         ],
+        lineTouchData: LineTouchData(
+          enabled: true,
+          getTouchedSpotIndicator: (barData, spotIndexes) {
+            return spotIndexes.map((index) {
+              return TouchedSpotIndicatorData(
+                FlLine(color: Colors.black54, strokeWidth: 1.5),
+                FlDotData(
+                  getDotPainter: (spot, percent, bar, index) =>
+                      FlDotCirclePainter(
+                    radius: 4,
+                    color: Colors.black87,
+                    strokeWidth: 0,
+                  ),
+                ),
+              );
+            }).toList();
+          },
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (touchedSpot) => Colors.black87,
+            tooltipPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 8,
+            ),
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((spot) {
+                final note = NoteMap.nearestNoteName(spot.x);
+                return LineTooltipItem(
+                  'Frecuencia: ${spot.x.toStringAsFixed(3)} Hz\n'
+                  'Amplitud: ${spot.y.toStringAsFixed(3)}\n'
+                  'Nota mas cercana: $note',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                );
+              }).toList();
+            },
+          ),
+        ),
       ),
     );
   }
