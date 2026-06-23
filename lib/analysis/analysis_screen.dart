@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import 'fft_processor.dart';
+import 'note_map.dart';
+import 'octave_bands_screen.dart';
 import 'wav_reader.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -17,10 +19,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   SpectrumResult? _spectrum;
-  int _nfft = 65536;
-  double _rawPeak = 0.0;
-  int _sampleRate = 0;
-  int _numSamples = 0;
+  SpectrumResult? _fullSpectrum;
+  final int _nfft = 65536;
 
   @override
   void initState() {
@@ -36,25 +36,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
     try {
       final wav = await WavReader.readFile(widget.wavFilePath);
-
-      // DIAGNOSTICO: pico de la senal en bruto, antes de cualquier FFT.
-      // Si esto ya sale muy bajo (cercano a 0), el problema esta en la
-      // grabacion (o en la lectura del WAV), no en el calculo del espectro.
-      double rawPeak = 0.0;
-      for (final s in wav.samples) {
-        final a = s.abs();
-        if (a > rawPeak) rawPeak = a;
-      }
-
       final fullSpectrum = FftProcessor.computeSpectrum(wav, nfft: _nfft);
       // Nos quedamos con el rango 0-1190 Hz, igual que la Figura 2 de MATLAB.
       final spectrum = fullSpectrum.sliceRange(0, 1190);
 
       setState(() {
         _spectrum = spectrum;
-        _rawPeak = rawPeak;
-        _sampleRate = wav.sampleRate;
-        _numSamples = wav.samples.length;
+        _fullSpectrum = fullSpectrum;
         _isLoading = false;
       });
     } catch (e) {
@@ -113,16 +101,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: Colors.yellow.shade100,
-            child: Text(
-              'DIAGNOSTICO: pico senal cruda = ${_rawPeak.toStringAsFixed(5)}  '
-              '|  Fs = $_sampleRate Hz  |  muestras = $_numSamples',
-              style: const TextStyle(fontSize: 11),
-            ),
-          ),
-          const SizedBox(height: 8),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -146,6 +124,33 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          SizedBox(
+            height: 20,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                const fMax = 1190.0;
+                return Stack(
+                  children: [
+                    for (final marker in NoteMap.buildMarkers())
+                      if (marker.isOctaveMarker)
+                        Positioned(
+                          left: (marker.frequency / fMax) * width - 12,
+                          child: Text(
+                            marker.label ?? '',
+                            style: TextStyle(
+                              color: Colors.red.shade800,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 4),
           Expanded(
             child: LineChart(
               LineChartData(
@@ -189,6 +194,46 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     dotData: const FlDotData(show: false),
                   ),
                 ],
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  getTouchedSpotIndicator: (barData, spotIndexes) {
+                    return spotIndexes.map((index) {
+                      return TouchedSpotIndicatorData(
+                        FlLine(color: Colors.black54, strokeWidth: 1.5),
+                        FlDotData(
+                          getDotPainter: (spot, percent, bar, index) =>
+                              FlDotCirclePainter(
+                            radius: 4,
+                            color: Colors.black87,
+                            strokeWidth: 0,
+                          ),
+                        ),
+                      );
+                    }).toList();
+                  },
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (touchedSpot) => Colors.black87,
+                    tooltipPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final note = NoteMap.nearestNoteName(spot.x);
+                        return LineTooltipItem(
+                          'Frecuencia: ${spot.x.toStringAsFixed(3)} Hz\n'
+                          'Amplitud: ${spot.y.toStringAsFixed(3)}\n'
+                          'Nota mas cercana: $note',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
               ),
             ),
           ),
@@ -197,6 +242,23 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             child: Text(
               'Frecuencia [Hz]',
               style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => OctaveBandsScreen(
+                      fullSpectrum: _fullSpectrum!,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.bar_chart),
+              label: const Text('Ver bandas de tercios de octava'),
             ),
           ),
         ],
