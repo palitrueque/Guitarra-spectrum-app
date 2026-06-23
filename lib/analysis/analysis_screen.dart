@@ -51,10 +51,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         octaveTable,
       );
 
-      // Rango 0-2000 Hz: cubre los picos de resonancia relevantes del
-      // cuerpo del instrumento, con margen por encima del mapa de notas
-      // (E2-D6, hasta ~1175 Hz).
-      final spectrum = fullSpectrum.sliceRange(0, 2000);
+      // Rango 0-1190 Hz: cubre hasta D6 (~1175 Hz), practicamente la
+      // nota mas aguda alcanzable en una guitarra.
+      final spectrum = fullSpectrum.sliceRange(0, 1190);
 
       setState(() {
         _spectrum = spectrum;
@@ -186,7 +185,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
-          const fMax = 2000.0;
+          const fMax = 1190.0;
           return Stack(
             children: [
               for (final marker in NoteMap.buildMarkers())
@@ -217,7 +216,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     return LineChart(
       LineChartData(
         minX: 0,
-        maxX: 2000,
+        maxX: 1190,
         minY: 0,
         maxY: maxMag * 1.1,
         gridData: const FlGridData(show: true),
