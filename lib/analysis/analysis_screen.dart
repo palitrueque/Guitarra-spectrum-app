@@ -2,7 +2,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import 'fft_processor.dart';
-import 'note_map.dart';
 import 'wav_reader.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -121,33 +120,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 20,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                const fMax = 1190.0;
-                return Stack(
-                  children: [
-                    for (final marker in NoteMap.buildMarkers())
-                      if (marker.isOctaveMarker)
-                        Positioned(
-                          left: (marker.frequency / fMax) * width - 12,
-                          child: Text(
-                            marker.label ?? '',
-                            style: TextStyle(
-                              color: Colors.red.shade800,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                  ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 4),
           Expanded(
             child: LineChart(
               LineChartData(
@@ -191,46 +163,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     dotData: const FlDotData(show: false),
                   ),
                 ],
-                lineTouchData: LineTouchData(
-                  enabled: true,
-                  getTouchedSpotIndicator: (barData, spotIndexes) {
-                    return spotIndexes.map((index) {
-                      return TouchedSpotIndicatorData(
-                        FlLine(color: Colors.black54, strokeWidth: 1.5),
-                        FlDotData(
-                          getDotPainter: (spot, percent, bar, index) =>
-                              FlDotCirclePainter(
-                            radius: 4,
-                            color: Colors.black87,
-                            strokeWidth: 0,
-                          ),
-                        ),
-                      );
-                    }).toList();
-                  },
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (touchedSpot) => Colors.black87,
-                    tooltipPadding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    getTooltipItems: (touchedSpots) {
-                      return touchedSpots.map((spot) {
-                        final note = NoteMap.nearestNoteName(spot.x);
-                        return LineTooltipItem(
-                          'Frecuencia: ${spot.x.toStringAsFixed(3)} Hz\n'
-                          'Amplitud: ${spot.y.toStringAsFixed(3)}\n'
-                          'Nota mas cercana: $note',
-                          const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        );
-                      }).toList();
-                    },
-                  ),
-                ),
               ),
             ),
           ),
