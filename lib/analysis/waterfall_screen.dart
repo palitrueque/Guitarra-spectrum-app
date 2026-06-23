@@ -17,11 +17,12 @@ class _WaterfallScreenState extends State<WaterfallScreen> {
   String? _errorMessage;
   WaterfallResult? _result;
 
-  // Mismos parametros que usa plot_wf.m en spectrum.m:
-  // nshift_wf = 15, shift_wf = 0.02
+  // Probando con mas rango temporal para ver mejor la caida de la
+  // resonancia: 30 ventanas x 25ms = 0.75s en total (en vez de los
+  // 15 x 20ms = 280ms originales de plot_wf.m).
   static const int _nfft = 65536;
-  static const int _nshift = 15;
-  static const double _tshift = 0.02;
+  static const int _nshift = 30;
+  static const double _tshift = 0.025;
   static const double _fMax = 1190.0;
 
   @override
@@ -63,13 +64,13 @@ class _WaterfallScreenState extends State<WaterfallScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Calculando 15 ventanas de FFT...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('Calculando $_nshift ventanas de FFT...'),
           ],
         ),
       );
