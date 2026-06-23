@@ -63,9 +63,26 @@ class FftProcessor {
     WavData wav, {
     int nfft = 65536,
     double thannSeconds = 0.1,
+    double ythreshold = 0.01,
   }) {
     final fs = wav.sampleRate.toDouble();
-    final y = wav.samples;
+    final allSamples = wav.samples;
+
+    // 0. Recortar el "tiempo muerto" inicial: buscar el primer instante
+    //    en que la senal supera el umbral, igual que `prepare_yt.m`
+    //    (tstart = find(y > yth, 1, 'first')). Sin esto, si hay un
+    //    silencio entre pulsar "Grabar" y el golpe real, la ventana de
+    //    Hann de 100ms analiza silencio en vez de la señal.
+    int startIndex = 0;
+    bool found = false;
+    for (int i = 0; i < allSamples.length; i++) {
+      if (allSamples[i] > ythreshold) {
+        startIndex = i;
+        found = true;
+        break;
+      }
+    }
+    final y = found ? allSamples.sublist(startIndex) : allSamples;
     final n = y.length;
 
     // 1. Ventana de Hann aplicada solo durante los primeros `thannSeconds`,
