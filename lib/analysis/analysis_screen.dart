@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'fft_processor.dart';
+import 'more_analysis_screen.dart';
 import 'note_map.dart';
-import 'octave_bands_screen.dart';
-import 'q_factor_screen.dart';
 import 'wav_reader.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -22,6 +21,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   String? _errorMessage;
   SpectrumResult? _spectrum;
   SpectrumResult? _fullSpectrum;
+  WavData? _wav;
   final int _nfft = 65536;
   bool? _lastIsLandscape;
 
@@ -54,6 +54,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       setState(() {
         _spectrum = spectrum;
         _fullSpectrum = fullSpectrum;
+        _wav = wav;
         _isLoading = false;
       });
     } catch (e) {
@@ -177,37 +178,21 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       ),
     );
 
-    final octaveBandsButton = SizedBox(
+    final moreAnalysisButton = SizedBox(
       width: double.infinity,
-      child: OutlinedButton.icon(
+      child: FilledButton.icon(
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => OctaveBandsScreen(
+              builder: (_) => MoreAnalysisScreen(
                 fullSpectrum: _fullSpectrum!,
+                wav: _wav!,
               ),
             ),
           );
         },
-        icon: const Icon(Icons.bar_chart),
-        label: const Text('Ver bandas de tercios de octava'),
-      ),
-    );
-
-    final qFactorButton = SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => QFactorScreen(
-                fullSpectrum: _fullSpectrum!,
-              ),
-            ),
-          );
-        },
-        icon: const Icon(Icons.show_chart),
-        label: const Text('Ver picos de resonancia (Q-factor)'),
+        icon: const Icon(Icons.analytics_outlined),
+        label: const Text('Mas analisis (octavas, Q-factor, waterfall...)'),
       ),
     );
 
@@ -229,9 +214,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             const SizedBox(height: 8),
             freqCaption,
             const SizedBox(height: 12),
-            octaveBandsButton,
-            const SizedBox(height: 8),
-            qFactorButton,
+            moreAnalysisButton,
           ],
         ),
       );
@@ -250,9 +233,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           const SizedBox(height: 8),
           freqCaption,
           const SizedBox(height: 12),
-          octaveBandsButton,
-          const SizedBox(height: 8),
-          qFactorButton,
+          moreAnalysisButton,
         ],
       ),
     );
