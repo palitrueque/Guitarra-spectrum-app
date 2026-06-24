@@ -47,7 +47,7 @@ class MoreAnalysisScreen extends StatelessWidget {
             subtitle: 'Tabla de frecuencias de resonancia y su factor Q',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => QFactorScreen(fullSpectrum: fullSpectrum),
+                builder: (_) => QFactorScreen(fullSpectrum: fullSpectrum, wav: wav),
               ),
             ),
           ),
