@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'analysis/analysis_screen.dart';
 import 'recorder_screen.dart';
@@ -100,6 +101,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
     if (newName == null || newName.trim() == info.name) return;
     await RecordingStorage.renameRecording(info.file, newName);
     _load();
+  }
+
+  Future<void> _share(RecordingInfo info) async {
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(info.file.path)],
+        text: 'Grabacion: ${info.name}',
+      ),
+    );
   }
 
   Future<void> _delete(RecordingInfo info) async {
@@ -205,10 +215,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
             },
             trailing: PopupMenuButton<String>(
               onSelected: (value) {
+                if (value == 'share') _share(info);
                 if (value == 'rename') _rename(info);
                 if (value == 'delete') _delete(info);
               },
               itemBuilder: (context) => [
+                const PopupMenuItem(value: 'share', child: Text('Compartir')),
                 const PopupMenuItem(value: 'rename', child: Text('Renombrar')),
                 const PopupMenuItem(value: 'delete', child: Text('Borrar')),
               ],
