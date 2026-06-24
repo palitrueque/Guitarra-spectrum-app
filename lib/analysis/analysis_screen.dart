@@ -241,6 +241,32 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     );
   }
 
+  /// Desde el indice tocado, "escala" hacia el pico local mas cercano
+  /// (sube por la pendiente mas empinada hasta que ya no se puede subir
+  /// mas), asi el punto seleccionado cae siempre justo en la cresta de
+  /// un pico en vez de en cualquier punto intermedio de la curva.
+  int _snapToNearestPeak(SpectrumResult spectrum, int fromIndex) {
+    final mag = spectrum.magnitudes;
+    int idx = fromIndex.clamp(0, mag.length - 1);
+
+    while (true) {
+      final hasLeft = idx > 0;
+      final hasRight = idx < mag.length - 1;
+      final leftHigher = hasLeft && mag[idx - 1] > mag[idx];
+      final rightHigher = hasRight && mag[idx + 1] > mag[idx];
+
+      if (!leftHigher && !rightHigher) {
+        break; // ya estamos en un pico local (o en un extremo)
+      }
+      if (rightHigher && (!leftHigher || mag[idx + 1] >= mag[idx - 1])) {
+        idx++;
+      } else {
+        idx--;
+      }
+    }
+    return idx;
+  }
+
   Widget _buildChart(SpectrumResult spectrum) {
     final maxMag = spectrum.magnitudes.isEmpty
         ? 1.0
@@ -310,6 +336,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 ],
                 lineTouchData: LineTouchData(
                   enabled: true,
+                  handleBuiltInTouches: false,
                   // No usamos el tooltip nativo (desaparece al levantar el
                   // dedo); guardamos el punto tocado en el estado y lo
                   // mostramos con nuestro propio recuadro persistente.
@@ -327,9 +354,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                         FlDotData(
                           getDotPainter: (spot, percent, bar, index) =>
                               FlDotCirclePainter(
-                            radius: 4,
+                            radius: 5,
                             color: Colors.black87,
-                            strokeWidth: 0,
+                            strokeWidth: 1.5,
+                            strokeColor: Colors.white,
                           ),
                         ),
                       );
@@ -341,11 +369,12 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                         response.lineBarSpots!.isEmpty) {
                       return;
                     }
-                    final spotIndex = response.lineBarSpots!.first.spotIndex;
+                    final rawIndex = response.lineBarSpots!.first.spotIndex;
+                    final peakIndex = _snapToNearestPeak(spectrum, rawIndex);
                     final pos = event.localPosition;
-                    if (spotIndex != _selectedIndex || pos != null) {
+                    if (peakIndex != _selectedIndex || pos != null) {
                       setState(() {
-                        _selectedIndex = spotIndex;
+                        _selectedIndex = peakIndex;
                         if (pos != null) _touchPosition = pos;
                       });
                     }
