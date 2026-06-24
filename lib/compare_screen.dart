@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import 'analysis/fft_processor.dart';
 import 'analysis/octave_bands.dart';
+import 'analysis/waterfall_painter.dart';
+import 'analysis/waterfall_processor.dart';
 import 'analysis/wav_reader.dart';
 
 /// Paleta fija de colores para diferenciar cada grabacion comparada.
@@ -34,8 +36,14 @@ class _CompareScreenState extends State<CompareScreen> {
   List<SpectrumResult> _spectra = [];
   List<List<OctaveBand>> _bandsList = [];
   List<List<OctaveIndex>> _indicesList = [];
+  List<WaterfallResult> _waterfalls = [];
   int? _selectedIndex;
   Offset? _touchPosition;
+
+  // Parametros ORIGINALES de plot_wf.m / spectrum.m (no los ampliados
+  // de la pantalla individual): 15 ventanas x 20ms = 280ms.
+  static const int _wfNshift = 15;
+  static const double _wfTshift = 0.02;
 
   static const int _nfft = 65536;
   static const double _fMax = 1190.0;
@@ -53,6 +61,7 @@ class _CompareScreenState extends State<CompareScreen> {
       final spectra = <SpectrumResult>[];
       final bandsList = <List<OctaveBand>>[];
       final indicesList = <List<OctaveIndex>>[];
+      final waterfalls = <WaterfallResult>[];
 
       for (final path in widget.wavPaths) {
         final wav = await WavReader.readFile(path);
@@ -60,15 +69,23 @@ class _CompareScreenState extends State<CompareScreen> {
         final sliced = fullSpectrum.sliceRange(0, _fMax);
         final bands = OctaveBandsCalculator.compute(fullSpectrum, table);
         final indices = OctaveIndexCalculator.compute(bands);
+        final waterfall = WaterfallProcessor.compute(
+          wav,
+          nfft: _nfft,
+          nshift: _wfNshift,
+          tshift: _wfTshift,
+        );
         spectra.add(sliced);
         bandsList.add(bands);
         indicesList.add(indices);
+        waterfalls.add(waterfall);
       }
 
       setState(() {
         _spectra = spectra;
         _bandsList = bandsList;
         _indicesList = indicesList;
+        _waterfalls = waterfalls;
         _isLoading = false;
       });
     } catch (e) {
@@ -157,8 +174,72 @@ class _CompareScreenState extends State<CompareScreen> {
           ),
           const SizedBox(height: 12),
           _buildIndicesTable(),
+          const SizedBox(height: 28),
+          Text(
+            'Waterfall (parametros originales: 15 ventanas x 20ms)',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          _buildMiniWaterfalls(),
         ],
       ),
+    );
+  }
+
+  Widget _buildMiniWaterfalls() {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        for (int i = 0; i < _waterfalls.length; i++)
+          SizedBox(
+            width: 160,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: kCompareColors[i % kCompareColors.length],
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        widget.names[i],
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  height: 140,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: CustomPaint(
+                    painter: WaterfallPainter(
+                      _waterfalls[i],
+                      _fMax,
+                      kCompareColors[i % kCompareColors.length],
+                    ),
+                    child: Container(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
