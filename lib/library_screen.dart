@@ -187,34 +187,81 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ? 'Selecciona hasta $_maxCompare (${_selectedPaths.length})'
             : 'Guitarra Spectrum'),
         centerTitle: true,
-        actions: [
-          if (!_isComparing)
-            IconButton(
-              onPressed: _importFile,
-              icon: const Icon(Icons.file_upload_outlined),
-              tooltip: 'Importar archivo .wav',
-            ),
-          IconButton(
-            onPressed: _toggleCompareMode,
-            icon: Icon(_isComparing ? Icons.close : Icons.compare_arrows),
-            tooltip: _isComparing ? 'Cancelar comparacion' : 'Comparar grabaciones',
-          ),
-        ],
       ),
       body: _buildBody(),
-      floatingActionButton: _isComparing
-          ? (_selectedPaths.length >= 2
-              ? FloatingActionButton.extended(
-                  onPressed: _openCompare,
-                  icon: const Icon(Icons.bar_chart),
-                  label: Text('Comparar (${_selectedPaths.length})'),
-                )
-              : null)
-          : FloatingActionButton.extended(
-              onPressed: _openRecorder,
-              icon: const Icon(Icons.fiber_manual_record),
-              label: const Text('Grabar'),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: _isComparing ? _buildComparingBar() : _buildNormalBar(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNormalBar() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _toggleCompareMode,
+            icon: const Icon(Icons.compare_arrows),
+            label: const Text('Comparar'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
             ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _importFile,
+            icon: const Icon(Icons.file_upload_outlined),
+            label: const Text('Importar'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: _openRecorder,
+            icon: const Icon(Icons.fiber_manual_record),
+            label: const Text('Grabar'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComparingBar() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _toggleCompareMode,
+            icon: const Icon(Icons.close),
+            label: const Text('Cancelar'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: _selectedPaths.length >= 2 ? _openCompare : null,
+            icon: const Icon(Icons.bar_chart),
+            label: Text('Comparar (${_selectedPaths.length})'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
