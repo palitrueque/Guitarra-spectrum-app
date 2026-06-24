@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'analysis/analysis_screen.dart';
+import 'compare_screen.dart';
 import 'recorder_screen.dart';
 import 'recording_storage.dart';
 
@@ -17,6 +18,9 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   List<RecordingInfo> _recordings = [];
   bool _isLoading = true;
+  bool _isComparing = false;
+  final Set<String> _selectedPaths = {};
+  static const int _maxCompare = 5;
 
   @override
   void initState() {
@@ -112,6 +116,44 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  void _toggleCompareMode() {
+    setState(() {
+      _isComparing = !_isComparing;
+      _selectedPaths.clear();
+    });
+  }
+
+  void _toggleSelected(RecordingInfo info) {
+    setState(() {
+      final path = info.file.path;
+      if (_selectedPaths.contains(path)) {
+        _selectedPaths.remove(path);
+      } else {
+        if (_selectedPaths.length >= _maxCompare) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Maximo $_maxCompare grabaciones a la vez')),
+          );
+          return;
+        }
+        _selectedPaths.add(path);
+      }
+    });
+  }
+
+  void _openCompare() {
+    final selected = _recordings
+        .where((r) => _selectedPaths.contains(r.file.path))
+        .toList();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CompareScreen(
+          wavPaths: selected.map((r) => r.file.path).toList(),
+          names: selected.map((r) => r.name).toList(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _delete(RecordingInfo info) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -141,22 +183,38 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Guitarra Spectrum'),
+        title: Text(_isComparing
+            ? 'Selecciona hasta $_maxCompare (${_selectedPaths.length})'
+            : 'Guitarra Spectrum'),
         centerTitle: true,
         actions: [
+          if (!_isComparing)
+            IconButton(
+              onPressed: _importFile,
+              icon: const Icon(Icons.file_upload_outlined),
+              tooltip: 'Importar archivo .wav',
+            ),
           IconButton(
-            onPressed: _importFile,
-            icon: const Icon(Icons.file_upload_outlined),
-            tooltip: 'Importar archivo .wav',
+            onPressed: _toggleCompareMode,
+            icon: Icon(_isComparing ? Icons.close : Icons.compare_arrows),
+            tooltip: _isComparing ? 'Cancelar comparacion' : 'Comparar grabaciones',
           ),
         ],
       ),
       body: _buildBody(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openRecorder,
-        icon: const Icon(Icons.fiber_manual_record),
-        label: const Text('Grabar'),
-      ),
+      floatingActionButton: _isComparing
+          ? (_selectedPaths.length >= 2
+              ? FloatingActionButton.extended(
+                  onPressed: _openCompare,
+                  icon: const Icon(Icons.bar_chart),
+                  label: Text('Comparar (${_selectedPaths.length})'),
+                )
+              : null)
+          : FloatingActionButton.extended(
+              onPressed: _openRecorder,
+              icon: const Icon(Icons.fiber_manual_record),
+              label: const Text('Grabar'),
+            ),
     );
   }
 
@@ -199,32 +257,46 @@ class _LibraryScreenState extends State<LibraryScreen> {
         itemCount: _recordings.length,
         itemBuilder: (context, index) {
           final info = _recordings[index];
+          final isSelected = _selectedPaths.contains(info.file.path);
           return ListTile(
-            leading: const Icon(Icons.audiotrack),
+            leading: _isComparing
+                ? Checkbox(
+                    value: isSelected,
+                    onChanged: (_) => _toggleSelected(info),
+                  )
+                : const Icon(Icons.audiotrack),
             title: Text(info.name),
             subtitle: Text(
               '${DateFormat('dd/MM/yyyy HH:mm').format(info.modified)}  '
               '|  ${(info.sizeBytes / 1024).toStringAsFixed(1)} KB',
             ),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => AnalysisScreen(wavFilePath: info.file.path),
-                ),
-              );
-            },
-            trailing: PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'share') _share(info);
-                if (value == 'rename') _rename(info);
-                if (value == 'delete') _delete(info);
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'share', child: Text('Compartir')),
-                const PopupMenuItem(value: 'rename', child: Text('Renombrar')),
-                const PopupMenuItem(value: 'delete', child: Text('Borrar')),
-              ],
-            ),
+            onTap: _isComparing
+                ? () => _toggleSelected(info)
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            AnalysisScreen(wavFilePath: info.file.path),
+                      ),
+                    );
+                  },
+            trailing: _isComparing
+                ? null
+                : PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'share') _share(info);
+                      if (value == 'rename') _rename(info);
+                      if (value == 'delete') _delete(info);
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                          value: 'share', child: Text('Compartir')),
+                      const PopupMenuItem(
+                          value: 'rename', child: Text('Renombrar')),
+                      const PopupMenuItem(
+                          value: 'delete', child: Text('Borrar')),
+                    ],
+                  ),
           );
         },
       ),
