@@ -350,12 +350,12 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   getTouchedSpotIndicator: (barData, spotIndexes) {
                     return spotIndexes.map((index) {
                       return TouchedSpotIndicatorData(
-                        FlLine(color: Colors.black54, strokeWidth: 1.5),
+                        FlLine(color: Colors.red.withOpacity(0.5), strokeWidth: 1.5),
                         FlDotData(
                           getDotPainter: (spot, percent, bar, index) =>
                               FlDotCirclePainter(
                             radius: 5,
-                            color: Colors.black87,
+                            color: Colors.red,
                             strokeWidth: 1.5,
                             strokeColor: Colors.white,
                           ),
