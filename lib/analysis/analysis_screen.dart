@@ -25,6 +25,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   final int _nfft = 65536;
   bool? _lastIsLandscape;
   int? _selectedIndex;
+  Offset? _touchPosition;
 
   @override
   void dispose() {
@@ -251,140 +252,157 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         ? _selectedIndex!
         : null;
 
-    return Stack(
-      children: [
-        LineChart(
-          LineChartData(
-            minX: 0,
-            maxX: 1190,
-            minY: 0,
-            maxY: maxMag * 1.1,
-            gridData: const FlGridData(show: true),
-            borderData: FlBorderData(show: true),
-            titlesData: FlTitlesData(
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  interval: 100,
-                  reservedSize: 28,
-                  getTitlesWidget: (value, meta) => Text(
-                    value.toInt().toString(),
-                    style: const TextStyle(fontSize: 10),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+
+        // Colocamos el recuadro en el cuadrante OPUESTO a donde esta el
+        // dedo, para que no tape la zona de la curva que estas mirando.
+        final pos = _touchPosition;
+        final touchedRight = pos != null && pos.dx > w / 2;
+        final touchedBottom = pos != null && pos.dy > h / 2;
+
+        return Stack(
+          children: [
+            LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: 1190,
+                minY: 0,
+                maxY: maxMag * 1.1,
+                gridData: const FlGridData(show: true),
+                borderData: FlBorderData(show: true),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 100,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) => Text(
+                        value.toInt().toString(),
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                    ),
+                  ),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: true, reservedSize: 40),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: [
+                      for (int i = 0; i < spectrum.frequencies.length; i++)
+                        FlSpot(spectrum.frequencies[i], spectrum.magnitudes[i]),
+                    ],
+                    isCurved: false,
+                    color: Theme.of(context).colorScheme.primary,
+                    barWidth: 1.2,
+                    dotData: const FlDotData(show: false),
+                    showingIndicators: selected != null ? [selected] : [],
+                  ),
+                ],
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  // No usamos el tooltip nativo (desaparece al levantar el
+                  // dedo); guardamos el punto tocado en el estado y lo
+                  // mostramos con nuestro propio recuadro persistente.
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => Colors.transparent,
+                    getTooltipItems: (touchedSpots) => touchedSpots
+                        .map((_) => null)
+                        .toList()
+                        .cast<LineTooltipItem?>(),
+                  ),
+                  getTouchedSpotIndicator: (barData, spotIndexes) {
+                    return spotIndexes.map((index) {
+                      return TouchedSpotIndicatorData(
+                        FlLine(color: Colors.black54, strokeWidth: 1.5),
+                        FlDotData(
+                          getDotPainter: (spot, percent, bar, index) =>
+                              FlDotCirclePainter(
+                            radius: 4,
+                            color: Colors.black87,
+                            strokeWidth: 0,
+                          ),
+                        ),
+                      );
+                    }).toList();
+                  },
+                  touchCallback: (event, response) {
+                    if (response == null ||
+                        response.lineBarSpots == null ||
+                        response.lineBarSpots!.isEmpty) {
+                      return;
+                    }
+                    final spotIndex = response.lineBarSpots!.first.spotIndex;
+                    final pos = event.localPosition;
+                    if (spotIndex != _selectedIndex || pos != null) {
+                      setState(() {
+                        _selectedIndex = spotIndex;
+                        if (pos != null) _touchPosition = pos;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+            if (selected != null)
+              Positioned(
+                top: touchedBottom ? 8 : null,
+                bottom: touchedBottom ? null : 8,
+                right: touchedRight ? null : 8,
+                left: touchedRight ? 8 : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Frecuencia: ${spectrum.frequencies[selected].toStringAsFixed(3)} Hz',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        'Amplitud: ${spectrum.magnitudes[selected].toStringAsFixed(3)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        'Nota mas cercana: ${NoteMap.nearestNoteName(spectrum.frequencies[selected])}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              leftTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-              ),
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-            ),
-            lineBarsData: [
-              LineChartBarData(
-                spots: [
-                  for (int i = 0; i < spectrum.frequencies.length; i++)
-                    FlSpot(spectrum.frequencies[i], spectrum.magnitudes[i]),
-                ],
-                isCurved: false,
-                color: Theme.of(context).colorScheme.primary,
-                barWidth: 1.2,
-                dotData: const FlDotData(show: false),
-                showingIndicators: selected != null ? [selected] : [],
-              ),
-            ],
-            lineTouchData: LineTouchData(
-              enabled: true,
-              // No usamos el tooltip nativo (desaparece al levantar el
-              // dedo); guardamos el punto tocado en el estado y lo
-              // mostramos con nuestro propio recuadro persistente.
-              touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (_) => Colors.transparent,
-                getTooltipItems: (touchedSpots) => touchedSpots
-                    .map((_) => null)
-                    .toList()
-                    .cast<LineTooltipItem?>(),
-              ),
-              getTouchedSpotIndicator: (barData, spotIndexes) {
-                return spotIndexes.map((index) {
-                  return TouchedSpotIndicatorData(
-                    FlLine(color: Colors.black54, strokeWidth: 1.5),
-                    FlDotData(
-                      getDotPainter: (spot, percent, bar, index) =>
-                          FlDotCirclePainter(
-                        radius: 4,
-                        color: Colors.black87,
-                        strokeWidth: 0,
-                      ),
-                    ),
-                  );
-                }).toList();
-              },
-              touchCallback: (event, response) {
-                if (response == null ||
-                    response.lineBarSpots == null ||
-                    response.lineBarSpots!.isEmpty) {
-                  return;
-                }
-                final spotIndex = response.lineBarSpots!.first.spotIndex;
-                if (spotIndex != _selectedIndex) {
-                  setState(() {
-                    _selectedIndex = spotIndex;
-                  });
-                }
-              },
-            ),
-          ),
-        ),
-        if (selected != null)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Frecuencia: ${spectrum.frequencies[selected].toStringAsFixed(3)} Hz',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    'Amplitud: ${spectrum.magnitudes[selected].toStringAsFixed(3)}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    'Nota mas cercana: ${NoteMap.nearestNoteName(spectrum.frequencies[selected])}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 
