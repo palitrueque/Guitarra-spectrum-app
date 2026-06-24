@@ -34,6 +34,8 @@ class _CompareScreenState extends State<CompareScreen> {
   List<SpectrumResult> _spectra = [];
   List<List<OctaveBand>> _bandsList = [];
   List<List<OctaveIndex>> _indicesList = [];
+  int? _selectedIndex;
+  Offset? _touchPosition;
 
   static const int _nfft = 65536;
   static const double _fMax = 1190.0;
@@ -235,6 +237,35 @@ class _CompareScreenState extends State<CompareScreen> {
     );
   }
 
+  /// Desde el indice tocado, escala hacia el pico mas cercano usando el
+  /// MAXIMO entre todas las curvas en cada punto (asi el "pico" tiene en
+  /// cuenta a la grabacion que mas resalte ahi, sea cual sea).
+  int _snapToNearestPeak(int fromIndex) {
+    final n = _spectra.first.magnitudes.length;
+    double combinedAt(int i) {
+      double m = 0;
+      for (final s in _spectra) {
+        if (s.magnitudes[i] > m) m = s.magnitudes[i];
+      }
+      return m;
+    }
+
+    int idx = fromIndex.clamp(0, n - 1);
+    while (true) {
+      final hasLeft = idx > 0;
+      final hasRight = idx < n - 1;
+      final leftHigher = hasLeft && combinedAt(idx - 1) > combinedAt(idx);
+      final rightHigher = hasRight && combinedAt(idx + 1) > combinedAt(idx);
+      if (!leftHigher && !rightHigher) break;
+      if (rightHigher && (!leftHigher || combinedAt(idx + 1) >= combinedAt(idx - 1))) {
+        idx++;
+      } else {
+        idx--;
+      }
+    }
+    return idx;
+  }
+
   Widget _buildSpectrumChart() {
     double maxMag = 1.0;
     for (final s in _spectra) {
@@ -243,46 +274,163 @@ class _CompareScreenState extends State<CompareScreen> {
       }
     }
 
-    return LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: _fMax,
-        minY: 0,
-        maxY: maxMag * 1.1,
-        gridData: const FlGridData(show: true),
-        borderData: FlBorderData(show: true),
-        titlesData: FlTitlesData(
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              interval: 100,
-              reservedSize: 28,
-              getTitlesWidget: (value, meta) => Text(
-                value.toInt().toString(),
-                style: const TextStyle(fontSize: 10),
+    final selected = _selectedIndex != null &&
+            _selectedIndex! >= 0 &&
+            _selectedIndex! < _spectra.first.frequencies.length
+        ? _selectedIndex!
+        : null;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        final pos = _touchPosition;
+        final touchedRight = pos != null && pos.dx > w / 2;
+        final touchedBottom = pos != null && pos.dy > h / 2;
+
+        return Stack(
+          children: [
+            LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: _fMax,
+                minY: 0,
+                maxY: maxMag * 1.1,
+                gridData: const FlGridData(show: true),
+                borderData: FlBorderData(show: true),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 100,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) => Text(
+                        value.toInt().toString(),
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                    ),
+                  ),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: true, reservedSize: 40),
+                  ),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
+                lineBarsData: [
+                  for (int i = 0; i < _spectra.length; i++)
+                    LineChartBarData(
+                      spots: [
+                        for (int k = 0; k < _spectra[i].frequencies.length; k++)
+                          FlSpot(_spectra[i].frequencies[k], _spectra[i].magnitudes[k]),
+                      ],
+                      isCurved: false,
+                      color: kCompareColors[i % kCompareColors.length],
+                      barWidth: 1.3,
+                      dotData: const FlDotData(show: false),
+                      showingIndicators: selected != null ? [selected] : [],
+                    ),
+                ],
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  handleBuiltInTouches: false,
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => Colors.transparent,
+                    getTooltipItems: (touchedSpots) =>
+                        touchedSpots.map((_) => null).toList().cast<LineTooltipItem?>(),
+                  ),
+                  getTouchedSpotIndicator: (barData, spotIndexes) {
+                    return spotIndexes.map((index) {
+                      return TouchedSpotIndicatorData(
+                        FlLine(color: Colors.transparent),
+                        FlDotData(
+                          getDotPainter: (spot, percent, bar, index) =>
+                              FlDotCirclePainter(
+                            radius: 4,
+                            color: bar.color ?? Colors.black,
+                            strokeWidth: 1.5,
+                            strokeColor: Colors.white,
+                          ),
+                        ),
+                      );
+                    }).toList();
+                  },
+                  touchCallback: (event, response) {
+                    if (response == null ||
+                        response.lineBarSpots == null ||
+                        response.lineBarSpots!.isEmpty) {
+                      return;
+                    }
+                    final rawIndex = response.lineBarSpots!.first.spotIndex;
+                    final peakIndex = _snapToNearestPeak(rawIndex);
+                    final touchPos = event.localPosition;
+                    if (peakIndex != _selectedIndex || touchPos != null) {
+                      setState(() {
+                        _selectedIndex = peakIndex;
+                        if (touchPos != null) _touchPosition = touchPos;
+                      });
+                    }
+                  },
+                ),
               ),
             ),
-          ),
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-          ),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        lineBarsData: [
-          for (int i = 0; i < _spectra.length; i++)
-            LineChartBarData(
-              spots: [
-                for (int k = 0; k < _spectra[i].frequencies.length; k++)
-                  FlSpot(_spectra[i].frequencies[k], _spectra[i].magnitudes[k]),
-              ],
-              isCurved: false,
-              color: kCompareColors[i % kCompareColors.length],
-              barWidth: 1.3,
-              dotData: const FlDotData(show: false),
-            ),
-        ],
-      ),
+            if (selected != null)
+              Positioned(
+                top: touchedBottom ? 8 : null,
+                bottom: touchedBottom ? null : 8,
+                right: touchedRight ? null : 8,
+                left: touchedRight ? 8 : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Frecuencia: ${_spectra.first.frequencies[selected].toStringAsFixed(3)} Hz',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      for (int i = 0; i < _spectra.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: kCompareColors[i % kCompareColors.length],
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${widget.names[i]}: ${_spectra[i].magnitudes[selected].toStringAsFixed(3)}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
