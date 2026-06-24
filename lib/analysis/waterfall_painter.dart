@@ -33,9 +33,13 @@ class WaterfallPainter extends CustomPainter {
     // AL FONDO; los instantes posteriores (decayendo) se acercan hacia
     // delante. Asi el pico mas alto no tapa a los que se forman despues,
     // y se ve la caida de la resonancia hacia el frente.
-    final verticalSpacing = size.height * 0.06;
-    final horizontalShift = size.width * 0.015;
-    final plotHeight = size.height - nTime * verticalSpacing - 6;
+    // El espaciado se reparte entre el numero de ventanas (nTime), no es
+    // un porcentaje fijo del tamano: asi cabe bien tanto con 15 ventanas
+    // (miniaturas) como con 30+ (pantalla completa), sin salirse nunca
+    // del contenedor.
+    final verticalSpacing = (size.height * 0.4) / nTime;
+    final horizontalShift = (size.width * 0.12) / nTime;
+    final plotHeight = size.height * 0.6 - 6;
     final baseY = size.height - 6;
 
     // Dibujamos de fondo (k=0, el mas alto) a frente (k=nTime-1, el mas
