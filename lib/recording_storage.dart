@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Informacion de una grabacion guardada en la biblioteca.
@@ -17,14 +18,27 @@ class RecordingInfo {
   });
 }
 
-/// Gestiona la carpeta "recordings" dentro del almacenamiento privado
-/// de la app: guardar grabaciones nuevas con un nombre elegido por el
-/// usuario, listar la biblioteca, importar archivos .wav externos,
-/// renombrar y borrar.
+/// Gestiona la carpeta "recordings" donde se guardan las grabaciones:
+/// guardar grabaciones nuevas con un nombre elegido por el usuario,
+/// listar la biblioteca, importar archivos .wav externos, renombrar y
+/// borrar.
 class RecordingStorage {
   static Future<Directory> recordingsDir() async {
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory('${docs.path}/recordings');
+    Directory base;
+    if (!kIsWeb && Platform.isAndroid) {
+      // Carpeta especifica de la app en el almacenamiento EXTERNO
+      // (visible con cualquier explorador de archivos en
+      // Android/data/<paquete>/files/recordings), a diferencia del
+      // almacenamiento interno privado que no se puede ver sin ADB.
+      final external = await getExternalStorageDirectory();
+      base = external ?? await getApplicationDocumentsDirectory();
+    } else {
+      // iOS no tiene almacenamiento externo publico; usamos la carpeta
+      // de Documentos de la app (visible en la app Archivos si se
+      // habilita "compartir archivos", configuracion aparte).
+      base = await getApplicationDocumentsDirectory();
+    }
+    final dir = Directory('${base.path}/recordings');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
