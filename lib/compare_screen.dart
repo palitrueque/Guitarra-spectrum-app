@@ -33,6 +33,7 @@ class _CompareScreenState extends State<CompareScreen> {
   String? _errorMessage;
   List<SpectrumResult> _spectra = [];
   List<List<OctaveBand>> _bandsList = [];
+  List<List<OctaveIndex>> _indicesList = [];
 
   static const int _nfft = 65536;
   static const double _fMax = 1190.0;
@@ -49,19 +50,23 @@ class _CompareScreenState extends State<CompareScreen> {
       final table = await OctaveBandsCalculator.loadTable();
       final spectra = <SpectrumResult>[];
       final bandsList = <List<OctaveBand>>[];
+      final indicesList = <List<OctaveIndex>>[];
 
       for (final path in widget.wavPaths) {
         final wav = await WavReader.readFile(path);
         final fullSpectrum = FftProcessor.computeSpectrum(wav, nfft: _nfft);
         final sliced = fullSpectrum.sliceRange(0, _fMax);
         final bands = OctaveBandsCalculator.compute(fullSpectrum, table);
+        final indices = OctaveIndexCalculator.compute(bands);
         spectra.add(sliced);
         bandsList.add(bands);
+        indicesList.add(indices);
       }
 
       setState(() {
         _spectra = spectra;
         _bandsList = bandsList;
+        _indicesList = indicesList;
         _isLoading = false;
       });
     } catch (e) {
@@ -143,6 +148,63 @@ class _CompareScreenState extends State<CompareScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+          const SizedBox(height: 28),
+          Text(
+            'Indices agregados por rango de frecuencia',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          _buildIndicesTable(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndicesTable() {
+    if (_indicesList.isEmpty || _indicesList.first.isEmpty) {
+      return const SizedBox();
+    }
+    final numIndices = _indicesList.first.length;
+    final numRecordings = _indicesList.length;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Table(
+        border: TableBorder.all(color: Colors.grey.shade300),
+        defaultColumnWidth: const IntrinsicColumnWidth(),
+        children: [
+          TableRow(
+            decoration: BoxDecoration(color: Colors.grey.shade200),
+            children: [
+              const _TableHeaderCell('Rango'),
+              for (int r = 0; r < numRecordings; r++)
+                _TableHeaderCell(
+                  '',
+                  dotColor: kCompareColors[r % kCompareColors.length],
+                ),
+            ],
+          ),
+          for (int i = 0; i < numIndices; i++)
+            TableRow(
+              decoration: BoxDecoration(
+                color: _indicesList.first[i].label.startsWith('Diferencia')
+                    ? Colors.amber.shade50
+                    : null,
+              ),
+              children: [
+                _TableCell(
+                  _indicesList.first[i].label,
+                  bold: _indicesList.first[i].label.startsWith('Diferencia'),
+                ),
+                for (int r = 0; r < numRecordings; r++)
+                  _TableCell(
+                    _indicesList[r][i].valueDb.isNaN
+                        ? '-'
+                        : _indicesList[r][i].valueDb.toStringAsFixed(2),
+                    bold: _indicesList.first[i].label.startsWith('Diferencia'),
+                  ),
+              ],
+            ),
         ],
       ),
     );
@@ -309,6 +371,56 @@ class _CompareScreenState extends State<CompareScreen> {
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TableHeaderCell extends StatelessWidget {
+  final String text;
+  final Color? dotColor;
+  const _TableHeaderCell(this.text, {this.dotColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dotColor != null) ...[
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TableCell extends StatelessWidget {
+  final String text;
+  final bool bold;
+  const _TableCell(this.text, {this.bold = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: bold ? FontWeight.bold : FontWeight.normal,
         ),
       ),
     );
