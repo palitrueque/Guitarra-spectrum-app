@@ -17,6 +17,7 @@ class _OctaveBandsScreenState extends State<OctaveBandsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<OctaveBand>? _bands;
+  List<OctaveIndex>? _indices;
 
   // Offset fijo usado solo para dibujar las barras (igual que en MATLAB:
   // bar(bands+30,...)), asi la barra crece desde 0 hacia arriba en vez
@@ -35,8 +36,10 @@ class _OctaveBandsScreenState extends State<OctaveBandsScreen> {
     try {
       final table = await OctaveBandsCalculator.loadTable();
       final bands = OctaveBandsCalculator.compute(widget.fullSpectrum, table);
+      final indices = OctaveIndexCalculator.compute(bands);
       setState(() {
         _bands = bands;
+        _indices = indices;
         _isLoading = false;
       });
     } catch (e) {
@@ -76,6 +79,7 @@ class _OctaveBandsScreenState extends State<OctaveBandsScreen> {
     }
 
     final bands = _bands!;
+    final indices = _indices!;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -87,7 +91,7 @@ class _OctaveBandsScreenState extends State<OctaveBandsScreen> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
-          Expanded(child: _buildChart(bands)),
+          SizedBox(height: 320, child: _buildChart(bands)),
           const SizedBox(height: 8),
           Center(
             child: Text(
@@ -95,8 +99,46 @@ class _OctaveBandsScreenState extends State<OctaveBandsScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+          const SizedBox(height: 24),
+          Text(
+            'Indices agregados por rango de frecuencia',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          Expanded(child: _buildIndicesList(indices)),
         ],
       ),
+    );
+  }
+
+  Widget _buildIndicesList(List<OctaveIndex> indices) {
+    return ListView.separated(
+      itemCount: indices.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, i) {
+        final item = indices[i];
+        final isDiff = item.label.startsWith('Diferencia');
+        return ListTile(
+          dense: true,
+          tileColor: isDiff ? Colors.amber.shade50 : null,
+          title: Text(
+            item.label,
+            style: TextStyle(
+              fontWeight: isDiff ? FontWeight.bold : FontWeight.normal,
+              fontSize: 13,
+            ),
+          ),
+          trailing: Text(
+            item.valueDb.isNaN
+                ? 'sin datos'
+                : '${item.valueDb.toStringAsFixed(3)} dB',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        );
+      },
     );
   }
 
