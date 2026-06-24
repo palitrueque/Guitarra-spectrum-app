@@ -84,3 +84,99 @@ class OctaveBandsCalculator {
     return bands;
   }
 }
+
+/// Un indice agregado: el promedio (en dB) de varias bandas de octava
+/// dentro de un rango de frecuencias mas amplio, igual que la seccion
+/// "Compute octaves parameters" de `compute_fft.m`.
+class OctaveIndex {
+  final String label;
+  final double valueDb;
+
+  OctaveIndex({required this.label, required this.valueDb});
+}
+
+/// Puerto a Dart de la seccion "Compute octaves parameters" de
+/// `compute_fft.m`: promedia el nivel de varias bandas de tercios de
+/// octava dentro de rangos de frecuencia predefinidos (ej. 80-1000 Hz,
+/// 1250-3150 Hz, por octavas completas, etc.), y calcula tambien la
+/// diferencia de nivel entre las bandas 80-1000 Hz y 1250-3150 Hz.
+class OctaveIndexCalculator {
+  // Pares [frecuencia central baja, frecuencia central alta] que
+  // delimitan cada grupo de bandas a promediar. Igual que `fpara` en
+  // MATLAB.
+  static const List<List<double>> _fpara = [
+    [80, 8000],
+    [80, 1000],
+    [1250, 3150],
+    [4000, 8000],
+    [80, 125],
+    [160, 250],
+    [250, 400],
+    [315, 500],
+    [630, 630],
+    [800, 1250],
+  ];
+
+  static const List<String> _labels = [
+    '80 - 8000 Hz (global)',
+    '80 - 1000 Hz',
+    '1250 - 3150 Hz',
+    '4000 - 8000 Hz',
+    '80 - 125 Hz',
+    '160 - 250 Hz',
+    '250 - 400 Hz',
+    '315 - 500 Hz',
+    '630 Hz',
+    '800 - 1250 Hz',
+  ];
+
+  static List<OctaveIndex> compute(List<OctaveBand> bands) {
+    final values = <double>[];
+
+    for (final pair in _fpara) {
+      final lowCenter = pair[0];
+      final highCenter = pair[1];
+
+      int i1 = -1;
+      int i2 = -1;
+      for (int i = 0; i < bands.length; i++) {
+        if ((bands[i].centerFrequency - lowCenter).abs() < 0.5) i1 = i;
+        if ((bands[i].centerFrequency - highCenter).abs() < 0.5) i2 = i;
+      }
+
+      if (i1 == -1 || i2 == -1) {
+        values.add(double.nan);
+        continue;
+      }
+
+      final lo = i1 < i2 ? i1 : i2;
+      final hi = i1 < i2 ? i2 : i1;
+
+      double sum = 0;
+      int count = 0;
+      for (int idx = lo; idx <= hi; idx++) {
+        final v = bands[idx].averageDb;
+        if (!v.isNaN) {
+          sum += v;
+          count++;
+        }
+      }
+      values.add(count > 0 ? sum / count : double.nan);
+    }
+
+    final results = <OctaveIndex>[];
+    for (int k = 0; k < values.length; k++) {
+      results.add(OctaveIndex(label: _labels[k], valueDb: values[k]));
+      if (k == 2) {
+        // Diferencia de nivel entre 80-1000 Hz (indice 1) y 1250-3150 Hz
+        // (indice 2), igual que en MATLAB.
+        results.add(OctaveIndex(
+          label: 'Diferencia 80-1000 vs 1250-3150 Hz',
+          valueDb: values[1] - values[2],
+        ));
+      }
+    }
+
+    return results;
+  }
+}
