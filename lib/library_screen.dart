@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import 'analysis/analysis_screen.dart';
 import 'compare_screen.dart';
+import 'instruments_list_screen.dart';
 import 'recorder_screen.dart';
 import 'recording_storage.dart';
 
@@ -187,6 +188,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ? 'Selecciona hasta $_maxCompare (${_selectedPaths.length})'
             : 'Guitarra Spectrum'),
         centerTitle: true,
+        actions: [
+          if (!_isComparing)
+            IconButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const InstrumentsListScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.library_books_outlined),
+              tooltip: 'Fichas de instrumento',
+            ),
+        ],
       ),
       body: _buildBody(),
       bottomNavigationBar: SafeArea(
