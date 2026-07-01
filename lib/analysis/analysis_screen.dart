@@ -153,27 +153,25 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: (_sampleRate != null && _sampleRate != 44100)
-                    ? Colors.orange.shade100
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'Fs: ${_sampleRate ?? "?"} Hz  |  '
-                'Bits: ${_bitsPerSample ?? "?"}  |  '
-                'Canales: ${_numChannelsRaw ?? "?"}  |  '
-                'Duracion calculada: ${_calculatedDuration?.toStringAsFixed(2) ?? "?"} s',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ),
+            // DIAGNOSTICO (oculto visualmente, mantener para uso futuro):
+            // descomenta el bloque siguiente para ver sample rate, bits,
+            // canales y duracion calculada del archivo WAV.
+            // const SizedBox(height: 6),
+            // Container(
+            //   width: double.infinity,
+            //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            //   decoration: BoxDecoration(
+            //     color: Colors.grey.shade100,
+            //     borderRadius: BorderRadius.circular(4),
+            //   ),
+            //   child: Text(
+            //     'Fs: ${_sampleRate ?? "?"} Hz  |  '
+            //     'Bits: ${_bitsPerSample ?? "?"}  |  '
+            //     'Canales: ${_numChannelsRaw ?? "?"}  |  '
+            //     'Duracion calculada: ${_calculatedDuration?.toStringAsFixed(2) ?? "?"} s',
+            //     style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            //   ),
+            // ),
           ],
         ),
       ),
