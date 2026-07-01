@@ -7,11 +7,15 @@ class WavData {
   final List<double> samples;
   final int sampleRate;
   final int numChannels;
+  final int bitsPerSample;
+  final int audioFormat; // 1=PCM, 3=float
 
   WavData({
     required this.samples,
     required this.sampleRate,
     required this.numChannels,
+    required this.bitsPerSample,
+    required this.audioFormat,
   });
 }
 
@@ -120,6 +124,8 @@ class WavReader {
       samples: samples,
       sampleRate: sampleRate,
       numChannels: 1, // ya hemos mezclado a mono
+      bitsPerSample: bitsPerSample,
+      audioFormat: audioFormat,
     );
   }
 }
