@@ -6,14 +6,16 @@ import 'dart:typed_data';
 class WavData {
   final List<double> samples;
   final int sampleRate;
-  final int numChannels;
+  final int numChannels;       // siempre 1 (ya mezclado a mono)
+  final int numChannelsRaw;    // canales REALES leidos del header del WAV
   final int bitsPerSample;
-  final int audioFormat; // 1=PCM, 3=float
+  final int audioFormat;
 
   WavData({
     required this.samples,
     required this.sampleRate,
     required this.numChannels,
+    required this.numChannelsRaw,
     required this.bitsPerSample,
     required this.audioFormat,
   });
@@ -123,7 +125,8 @@ class WavReader {
     return WavData(
       samples: samples,
       sampleRate: sampleRate,
-      numChannels: 1, // ya hemos mezclado a mono
+      numChannels: 1,
+      numChannelsRaw: numChannels,
       bitsPerSample: bitsPerSample,
       audioFormat: audioFormat,
     );
