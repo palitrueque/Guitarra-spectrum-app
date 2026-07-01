@@ -26,6 +26,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   bool? _lastIsLandscape;
   int? _selectedIndex;
   Offset? _touchPosition;
+  int? _sampleRate;
 
   @override
   void dispose() {
@@ -57,6 +58,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         _spectrum = spectrum;
         _fullSpectrum = fullSpectrum;
         _wav = wav;
+        _sampleRate = wav.sampleRate;
         _isLoading = false;
       });
     } catch (e) {
@@ -124,20 +126,45 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     final infoCard = Card(
       child: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
           children: [
-            _infoColumn(
-              'Frecuencia de pico',
-              '${spectrum.peakFrequency.toStringAsFixed(2)} Hz',
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _infoColumn(
+                  'Frecuencia de pico',
+                  '${spectrum.peakFrequency.toStringAsFixed(2)} Hz',
+                ),
+                _infoColumn(
+                  'Amplitud',
+                  spectrum.peakMagnitude.toStringAsFixed(2),
+                ),
+                _infoColumn(
+                  'Resolucion',
+                  '${spectrum.frequencyResolution.toStringAsFixed(3)} Hz',
+                ),
+              ],
             ),
-            _infoColumn(
-              'Amplitud',
-              spectrum.peakMagnitude.toStringAsFixed(2),
-            ),
-            _infoColumn(
-              'Resolucion',
-              '${spectrum.frequencyResolution.toStringAsFixed(3)} Hz',
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: (_sampleRate != null && _sampleRate != 44100)
+                    ? Colors.orange.shade100
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'Sample rate del archivo: ${_sampleRate ?? "?"} Hz'
+                '${(_sampleRate != null && _sampleRate != 44100) ? "  ⚠️ (se esperaban 44100 Hz — esto puede afectar las frecuencias)" : "  ✓"}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: (_sampleRate != null && _sampleRate != 44100)
+                      ? Colors.orange.shade900
+                      : Colors.grey.shade600,
+                ),
+              ),
             ),
           ],
         ),
