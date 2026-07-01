@@ -211,7 +211,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             icon: const Icon(Icons.fiber_manual_record),
             label: const Text('Grabar'),
             style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 7),
             ),
           ),
         ),
