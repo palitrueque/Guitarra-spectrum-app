@@ -29,6 +29,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   int? _sampleRate;
   int? _bitsPerSample;
   int? _audioFormat;
+  int? _numChannelsRaw;
 
   @override
   void dispose() {
@@ -63,6 +64,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         _sampleRate = wav.sampleRate;
         _bitsPerSample = wav.bitsPerSample;
         _audioFormat = wav.audioFormat;
+        _numChannelsRaw = wav.numChannelsRaw;
         _isLoading = false;
       });
     } catch (e) {
@@ -160,13 +162,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                'Sample rate: ${_sampleRate ?? "?"} Hz  |  '
+                'Fs: ${_sampleRate ?? "?"} Hz  |  '
                 'Bits: ${_bitsPerSample ?? "?"}  |  '
-                'Formato: ${_audioFormat == 3 ? "Float32" : _audioFormat == 1 ? "PCM" : "?"}'
-                '${(_sampleRate != null && _sampleRate != 44100) ? "  ⚠️ sample rate inesperado" : ""}',
+                'Formato: ${_audioFormat == 3 ? "Float32" : "PCM"}  |  '
+                'Canales en archivo: ${_numChannelsRaw ?? "?"}'
+                '${(_numChannelsRaw != null && _numChannelsRaw! > 1) ? "  ⚠️ ESTEREO (puede causar frecuencias a la mitad)" : ""}',
                 style: TextStyle(
                   fontSize: 11,
-                  color: (_sampleRate != null && _sampleRate != 44100)
+                  color: (_numChannelsRaw != null && _numChannelsRaw! > 1)
                       ? Colors.orange.shade900
                       : Colors.grey.shade600,
                 ),
