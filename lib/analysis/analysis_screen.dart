@@ -27,6 +27,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   int? _selectedIndex;
   Offset? _touchPosition;
   int? _sampleRate;
+  int? _bitsPerSample;
+  int? _audioFormat;
 
   @override
   void dispose() {
@@ -59,6 +61,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         _fullSpectrum = fullSpectrum;
         _wav = wav;
         _sampleRate = wav.sampleRate;
+        _bitsPerSample = wav.bitsPerSample;
+        _audioFormat = wav.audioFormat;
         _isLoading = false;
       });
     } catch (e) {
@@ -156,8 +160,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                'Sample rate del archivo: ${_sampleRate ?? "?"} Hz'
-                '${(_sampleRate != null && _sampleRate != 44100) ? "  ⚠️ (se esperaban 44100 Hz — esto puede afectar las frecuencias)" : "  ✓"}',
+                'Sample rate: ${_sampleRate ?? "?"} Hz  |  '
+                'Bits: ${_bitsPerSample ?? "?"}  |  '
+                'Formato: ${_audioFormat == 3 ? "Float32" : _audioFormat == 1 ? "PCM" : "?"}'
+                '${(_sampleRate != null && _sampleRate != 44100) ? "  ⚠️ sample rate inesperado" : ""}',
                 style: TextStyle(
                   fontSize: 11,
                   color: (_sampleRate != null && _sampleRate != 44100)
