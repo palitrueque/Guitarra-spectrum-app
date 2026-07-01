@@ -188,18 +188,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ? 'Selecciona hasta $_maxCompare (${_selectedPaths.length})'
             : 'Guitarra Spectrum'),
         centerTitle: true,
-        actions: [
-          if (!_isComparing)
-            IconButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const InstrumentsListScreen(),
-                ),
-              ),
-              icon: const Icon(Icons.library_books_outlined),
-              tooltip: 'Fichas de instrumento',
-            ),
-        ],
       ),
       body: _buildBody(),
       bottomNavigationBar: SafeArea(
@@ -212,31 +200,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildNormalBar() {
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _toggleCompareMode,
-            icon: const Icon(Icons.compare_arrows),
-            label: const Text('Comparar'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _importFile,
-            icon: const Icon(Icons.file_upload_outlined),
-            label: const Text('Importar'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
+        // Boton Grabar centrado y destacado
+        SizedBox(
+          width: double.infinity,
           child: FilledButton.icon(
             onPressed: _openRecorder,
             icon: const Icon(Icons.fiber_manual_record),
@@ -245,6 +214,48 @@ class _LibraryScreenState extends State<LibraryScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
+        ),
+        const SizedBox(height: 8),
+        // Fila de 3 botones secundarios
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _toggleCompareMode,
+                icon: const Icon(Icons.compare_arrows, size: 18),
+                label: const Text('Comparar'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _importFile,
+                icon: const Icon(Icons.file_upload_outlined, size: 18),
+                label: const Text('Importar'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const InstrumentsListScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.library_books_outlined, size: 18),
+                label: const Text('Fichas'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
