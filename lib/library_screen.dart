@@ -203,15 +203,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Boton Grabar centrado y destacado
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: _openRecorder,
-            icon: const Icon(Icons.fiber_manual_record),
-            label: const Text('Grabar'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 7),
+        // Boton Grabar centrado, mitad de ancho
+        Center(
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.5,
+            child: FilledButton.icon(
+              onPressed: _openRecorder,
+              icon: const Icon(Icons.fiber_manual_record),
+              label: const Text('Grabar'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
             ),
           ),
         ),
