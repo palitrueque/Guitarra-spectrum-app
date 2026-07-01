@@ -30,6 +30,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   int? _bitsPerSample;
   int? _audioFormat;
   int? _numChannelsRaw;
+  double? _calculatedDuration;
 
   @override
   void dispose() {
@@ -65,6 +66,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         _bitsPerSample = wav.bitsPerSample;
         _audioFormat = wav.audioFormat;
         _numChannelsRaw = wav.numChannelsRaw;
+        _calculatedDuration = wav.samples.length / wav.sampleRate;
         _isLoading = false;
       });
     } catch (e) {
@@ -164,14 +166,11 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               child: Text(
                 'Fs: ${_sampleRate ?? "?"} Hz  |  '
                 'Bits: ${_bitsPerSample ?? "?"}  |  '
-                'Formato: ${_audioFormat == 3 ? "Float32" : "PCM"}  |  '
-                'Canales en archivo: ${_numChannelsRaw ?? "?"}'
-                '${(_numChannelsRaw != null && _numChannelsRaw! > 1) ? "  ⚠️ ESTEREO (puede causar frecuencias a la mitad)" : ""}',
+                'Canales: ${_numChannelsRaw ?? "?"}  |  '
+                'Duracion calculada: ${_calculatedDuration?.toStringAsFixed(2) ?? "?"} s',
                 style: TextStyle(
                   fontSize: 11,
-                  color: (_numChannelsRaw != null && _numChannelsRaw! > 1)
-                      ? Colors.orange.shade900
-                      : Colors.grey.shade600,
+                  color: Colors.grey.shade600,
                 ),
               ),
             ),
